@@ -34,6 +34,495 @@
         My final project for CSC106 is a game I coded, titled Asteroid Flight. It's an "endless runner" game, where your goal is simply to survive as long as possible, while trying to get as a high a score as possible. 
         To play the game, you use the arrow keys to move your ship around. You want to avoid the asteroids that come at you, while trying to pick up the yellow pellets that will increase your score. 
         There are three difficulties to choose from - Easy, Hard, and Extreme. Each difficulty is faster than the last, and it will be harder and harder to survive for longer amounts of time. 
+      </p>
+      
+      <script>
+          var health = 5;
+var score = 0;
+var playing = true;
+var currentDifficulty = 0;
+
+var Button = function(config) {
+    this.x = config.x || 0;
+    this.y = config.y || 0;
+    this.width = config.width || 150;
+    this.height = config.height || 50;
+    this.label = config.label || "Click";
+    this.onClick = config.onClick || function() {};
+};
+
+Button.prototype.draw = function(textX, textY) {
+    fill(255,255,255);
+    rect(this.x, this.y, this.width, this.height, 5);
+    fill(0, 0, 0);
+    textSize(19);
+    textAlign(LEFT, CENTER);
+    text(this.label, this.x+4, this.y+this.height/4);
+};
+
+Button.prototype.isMouseInside = function() {
+    return mouseX > this.x &&
+           mouseX < (this.x + this.width) &&
+           mouseY > this.y &&
+           mouseY < (this.y + this.height);
+};
+
+Button.prototype.handleMouseClick = function() {
+    if (this.isMouseInside()) {
+        this.onClick();
+    }
+};
+
+//Space
+/*This part of the code creates the object class which creates the stars, which are used as the background of the game. The stars move to simulate the player moving through space, at different speeds depending on difficulty.*/
+
+var Star = function(x, y) {
+    this.x = x;
+    this.y = y;
+};
+
+Star.prototype.draw = function() {
+    fill(255,255,255);
+    rectMode(CENTER);
+    ellipse (this.x, this.y, 5, 5);
+};
+
+var stars = [];
+
+for (var i = 0; i < 4000; i++) {  
+    stars.push(new Star(i * 10 + 50, random(0, 390)));
+}
+
+//Collectibles
+/*This code creates the object class for the items the player must collect to increase their score.*/
+
+var Collectible = function(x, y) {
+    this.x = x;
+    this.y = y;
+};
+
+Collectible.prototype.draw = function() {
+    fill(255,255,0);
+    rect (this.x, this.y-10, 10, 10);
+    //This prevents the collectibles from being created outside the bounds of the screen.
+    this.y = constrain(this.y, 30, 370);
+};
+
+var collectibles = [];
+
+for (var i = 0; i <= 1000; i++) {  
+    collectibles.push(new Collectible(i * 80 + 410, random(0, 390)));
+}
+
+//Asteroids
+/*This code creates the object class for the obstacles that the player must avoid to continue playing. The obstacles will move faster depending on the difficulty you select.*/
+
+var Asteroid = function(x, y) {
+    this.x = x;
+    this.y = y;
+};
+
+Asteroid.prototype.draw = function() {
+    fill(112, 112, 112);
+    stroke(0,0,0);
+    ellipse (this.x, this.y, 50, 45);
+
+    //This prevents the asteroids from being created outside the bounds of the screen.
+    this.y = constrain(this.y, 30, 370);
+};
+
+var asteroids = [];
+
+for (var i = 0; i < 1200; i++) {  
+    asteroids.push(new Asteroid(i * 150 + 445, random(0, 390)));
+}
+
+
+//Ship
+/*This part of the code creates the object class that creates the player's ship. This is what the player has control over. When the ship interacts with either an asteroid or a collectible, it's health will drop or it's score will rise, respectively.*/
+
+var Ship = function (x,y) {
+    this.x = x;
+    this.y = y;
+    this.score = 0;
+    this.health = 5;
+};
+
+Ship.prototype.draw = function() {
+//Ship
+fill (200, 200, 200);
+
+//Wing Extensions
+rect (this.x, (this.y - 21), 34, 5);
+rect (this.x, (this.y + 19), 34, 5);
+
+//Wings
+rect ((this.x - 16), (this.y - 1), 12, 44.5);
+
+//Cockpit
+rect (this.x, this.y, 45, 12);
+
+//Detail Color
+fill (0, 47, 166);
+rect ((this.x + 7), this.y, 24, 4);
+
+//Window
+fill (0, 255, 255);
+rect ((this.x + -5), this.y, 10, 8);
+
+//This prevents the player from leaving the bounds of the screen.
+
+this.y = constrain(this.y, 30, 370);
+this.x = constrain(this.x, 30, 370);
+};
+
+//This series of code is what allows the player to move
+
+Ship.prototype.moveUp = function(){
+    this.y -= 12;
+};
+
+Ship.prototype.moveDown = function(){
+    this.y += 12;
+};
+
+Ship.prototype.moveLeft = function(){
+    this.x -= 12;
+};
+
+Ship.prototype.moveRight = function(){
+    this.x += 12;
+};
+
+//This will check for if an asteroid has collided with the player's ship
+
+Ship.prototype.checkForAsteroidHit = function(asteroid){
+    if ((asteroid.x >= (this.x-22) && asteroid.x <= (this.x + 20)) && (asteroid.y >= (this.y - 40) && asteroid.y <= (this.y+40)) && playing === true) {
+        asteroid.x = -400;
+        health = health - 1;
+    }
+    
+};
+
+// This will check for if an asteroid has collided with the player's ship
+
+Ship.prototype.checkForCollectibleHit = function(collectible){
+    if ((collectible.x >= (this.x-22) && collectible.x <= (this.x + 22)) && (collectible.y >= (this.y - 22) && collectible.y <= (this.y+35)) && playing === true) {
+        collectible.x = -400;
+        score = score + 1;
+    } 
+};
+
+//This creates a new object of class Ship, which is what the player will control.
+
+var playShip = new Ship (75, 200);
+
+var menuButtonImage = new Button({
+    x: 200,
+    y: 350,
+    label: "Main Menu"
+});
+
+/*This is one of the three modes available to play. Easy mode is, as the name suggests, easier than the other two modes. The asteroids and collectibles move slowly.*/
+var drawEasyMode = function(){
+    currentDifficulty = 1;
+    
+    draw = function() {
+        background (0, 3, 36);
+    
+        for (var i = 0; i < stars.length; i++) {
+            stars[i].draw();
+            stars[i].x -= 3;
+        }
+        
+        //This will prevent the player from moving after they lose.
+        if (playing === true){
+            
+        if (keyIsPressed && keyCode === UP){
+            playShip.moveUp();
+        }
+    
+        if (keyIsPressed && keyCode === DOWN){
+            playShip.moveDown();
+        }
+    
+        if (keyIsPressed && keyCode === LEFT){
+            playShip.moveLeft();
+        }
+    
+        if (keyIsPressed && keyCode === RIGHT){
+            playShip.moveRight();
+        }
+        }
+    
+        playShip.draw();
+    
+      
+
+        for (var i = 0; i < asteroids.length; i++) {
+            asteroids[i].draw();
+            playShip.checkForAsteroidHit(asteroids[i]);
+            asteroids[i].x -= 7;
+        }  
+        
+        for (var i = 0; i < collectibles.length; i++) {
+            collectibles[i].draw();
+            playShip.checkForCollectibleHit(collectibles[i]);
+            collectibles[i].x -= 4;
+        }
+        
+            text ("Score: " + score, 5, 14);
+            text ("Health: " + health, 101, 14);
+            
+            /*This of statement checks for the player's health, and if it reaches 0, it will             run the game over screen.*/
+            if (health === 0){
+                playing = false;
+                text ("You died! Your final score was " + score + ". Try again!", 23, 200);
+                menuButtonImage.draw();
+            }        
+            
+    };
+
+};
+
+/*This creates the hard mode. In hard mode, the obstacles and collectibles moves slightly faster than in easy mode, but is still pretty manageable.*/
+var drawHardMode = function(){
+    currentDifficulty = 2;
+    
+    draw = function() {
+        background (0, 3, 36);
+    
+        for (var i = 0; i < stars.length; i++) {
+            stars[i].draw();
+            stars[i].x -= 5;
+        }
+    
+        if (playing === true){
+            
+        if (keyIsPressed && keyCode === UP){
+            playShip.moveUp();
+        }
+    
+        if (keyIsPressed && keyCode === DOWN){
+            playShip.moveDown();
+        }
+    
+        if (keyIsPressed && keyCode === LEFT){
+            playShip.moveLeft();
+        }
+    
+        if (keyIsPressed && keyCode === RIGHT){
+            playShip.moveRight();
+        }
+        }
+    
+        playShip.draw();
+    
+      
+
+        for (var i = 0; i < asteroids.length; i++) {
+            asteroids[i].draw();
+            playShip.checkForAsteroidHit(asteroids[i]);
+            asteroids[i].x -= 12;
+        }  
+        
+        for (var i = 0; i < collectibles.length; i++) {
+            collectibles[i].draw();
+            playShip.checkForCollectibleHit(collectibles[i]);
+            collectibles[i].x -= 6;
+        }
+        
+            text ("Score: " + score, 5, 14);
+            text ("Health: " + health, 101, 14);
+            
+            if (health === 0){
+                playing = false;
+                text ("You died! Your final score was " + score + ". Try again!", 23, 200);
+                menuButtonImage.draw();
+                
+            }
+    };
+};
+
+/*Extreme Mode is the hardest difficulty of the program. The asteroids move very fast and it will take a lot of skill and attention to last long, hence the title "Extreme".*/
+var drawExtremeMode = function(){
+    currentDifficulty = 3;
+    
+    draw = function() {
+        background (0, 3, 36);
+    
+        for (var i = 0; i < stars.length; i++) {
+            stars[i].draw();
+            stars[i].x -= 8;
+        }
+    
+        if (playing === true){
+            
+        if (keyIsPressed && keyCode === UP){
+            playShip.moveUp();
+        }
+    
+        if (keyIsPressed && keyCode === DOWN){
+            playShip.moveDown();
+        }
+    
+        if (keyIsPressed && keyCode === LEFT){
+            playShip.moveLeft();
+        }
+    
+        if (keyIsPressed && keyCode === RIGHT){
+            playShip.moveRight();
+        }
+        }
+    
+        playShip.draw();
+    
+      
+
+        for (var i = 0; i < asteroids.length; i++) {
+            asteroids[i].draw();
+            playShip.checkForAsteroidHit(asteroids[i]);
+            asteroids[i].x -= 20;
+        }  
+        
+        for (var i = 0; i < collectibles.length; i++) {
+            collectibles[i].draw();
+            playShip.checkForCollectibleHit(collectibles[i]);
+            collectibles[i].x -= 9;
+        }
+        
+            text ("Score: " + score, 5, 14);
+            text ("Health: " + health, 101, 14);
+            
+            if (health === 0){
+                playing = false;
+                text ("You died! Your final score was " + score + ". Try again!", 23, 200);
+                menuButtonImage.draw();
+            }
+    };
+};
+
+
+
+
+
+
+var easyBtn = new Button({
+    x: 120,
+    y: 155,
+    label: "Easy Mode",
+    onClick: function() {
+        if (currentDifficulty === 0){
+                currentDifficulty = 1;
+                health = 5;
+                score = 0;
+                playing = true;
+                 drawEasyMode();
+            }
+       }
+});
+
+var hardBtn = new Button({
+    x: 120,
+    y: 220,
+    label: "Hard Mode",
+    onClick: function() {
+        if (currentDifficulty === 0){
+            currentDifficulty = 2;
+            health = 5;
+            score = 0;
+            playing = true;
+            drawHardMode();
+            }
+       }
+});
+
+var extremeBtn = new Button({
+    x: 120,
+    y: 285,
+    label: "Extreme Mode",
+    onClick: function() {
+        if (currentDifficulty === 0){
+            currentDifficulty = 3;
+            health = 5;
+            score = 0;
+            playing = true;
+            drawExtremeMode();
+                
+            }
+       }
+});
+
+//This will explain all the rules of the game.
+var drawRulesScreen = function(){
+    currentDifficulty = 4;
+    draw = function() {
+        background (0, 9, 51);
+        fill (255, 255, 255);
+        text ("How To Play", 140, 50);
+        text ("Use the arrow keys to move around!", 50, 100);
+        text ("Avoid the asteroids!", 50, 150);
+        text ("Collect the yellow pellets!", 50, 200);
+        text ("Try to last as long as you can!", 50, 250);
+        textSize (10);
+        text ("After losing, to return to the main menu, click on the Main Menu text, not the button itself.", 5, 300);
+        text ("Please use the Khan restart button after returning to the main menu after losing.", 30, 325);
+        menuButtonImage.draw();
+    };
+    
+};
+
+var rulesBtn = new Button({
+    x: 120,
+    y: 85,
+    label: "How To Play",
+    onClick: function() {
+        if (currentDifficulty === 0){
+            drawRulesScreen();
+        }
+    }
+});
+
+var drawTitle = function(){
+    background (0, 9, 51);    
+    stroke (0, 51, 255);
+    fill (255, 255, 255);
+    textSize (30);
+    text ("Asteroid Flight", 100, 50);
+    easyBtn.draw();
+    hardBtn.draw();
+    extremeBtn.draw();
+    rulesBtn.draw();
+};
+
+var menuButton = new Button({
+    x: 200,
+    y: 350,
+    label: "Main Menu",
+    onClick: function() {
+        if (currentDifficulty > 0){
+            currentDifficulty = 0;
+            health = health;
+            score = score;
+            playing = true;
+            draw = function() {
+                drawTitle();
+            };
+ 
+            }
+       }
+});
+
+drawTitle();
+
+mouseClicked = function(){
+    easyBtn.handleMouseClick();
+    hardBtn.handleMouseClick();
+    extremeBtn.handleMouseClick();
+    menuButton.handleMouseClick();
+    rulesBtn.handleMouseClick();
+};
+      </script>
         
     </body>
 </html>
